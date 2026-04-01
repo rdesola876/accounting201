@@ -24,8 +24,8 @@ const APP_CONFIG = {
   //  Get one at: https://console.anthropic.com
   // ----------------------------------------------------------
   ai: {
-    apiKey: "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",
-    model: "claude-sonnet-4-20250514",
+    apiKey: "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",
+    model: "claude-sonnet-4-6",
     maxTokens: 800,
 
     // The personality and teaching style of the AI tutor.
