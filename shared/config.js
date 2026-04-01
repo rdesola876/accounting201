@@ -11,11 +11,11 @@ const APP_CONFIG = {
   // ----------------------------------------------------------
   app: {
     name: "Accounting 201 AI Tutor",
-    institution: "Your University Name",
+    institution: "Loyola University Chicago",
     courseCode: "ACCT 201",
     semester: "Spring 2025",
-    instructorName: "Prof. Martinez",
-    instructorEmail: "martinez@university.edu",
+    instructorName: "Dr. De Sola ",
+    instructorEmail: "rdesola@luc.edu",
   },
 
   // ----------------------------------------------------------
@@ -24,7 +24,7 @@ const APP_CONFIG = {
   //  Get one at: https://console.anthropic.com
   // ----------------------------------------------------------
   ai: {
-    apiKey: "YOUR_API_KEY_HERE",
+    apiKey: "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",
     model: "claude-sonnet-4-20250514",
     maxTokens: 800,
 
