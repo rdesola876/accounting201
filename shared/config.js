@@ -24,7 +24,7 @@ const APP_CONFIG = {
   //  Get one at: https://console.anthropic.com
   // ----------------------------------------------------------
   ai: {
-    apiKey: "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",
+    apiKey: "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",
     model: "claude-sonnet-4-20250514",
     maxTokens: 800,
 
