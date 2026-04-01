@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accounting 201 — Student Tutor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="../shared/config.js"></script>
+  <style>
+    :root {
+      --primary:        #2563eb;
+      --primary-dim:    #1d4ed8;
+      --primary-glow:   rgba(37,99,235,0.15);
+      --accent:         #10b981;
+      --accent-glow:    rgba(16,185,129,0.15);
+      --danger:         #ef4444;
+      --warn:           #f59e0b;
+      --bg:             #0f1117;
+      --bg2:            #161b27;
+      --surface:        #1e2535;
+      --surface2:       #252d3d;
+      --border:         rgba(255,255,255,0.07);
+      --border-strong:  rgba(255,255,255,0.13);
+      --text:           #f1f5f9;
+      --text-muted:     #94a3b8;
+      --text-dim:       #4b5563;
+      --radius-sm:      6px;
+      --radius-md:      12px;
+      --radius-lg:      18px;
+      --font:           'Sora', sans-serif;
+      --font-mono:      'JetBrains Mono', monospace;
+      --sidebar-w:      268px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); font-family: var(--font); color: var(--text); font-size: 14.5px; line-height: 1.6; }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(37,99,235,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; position: relative; z-index: 1; }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+    .sidebar-header {
+      padding: 1.4rem 1.25rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo {
+      width: 36px; height: 36px; background: linear-gradient(135deg, var(--primary), #7c3aed);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 10px;
+    }
+    .sidebar-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+    .sidebar-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .student-card {
+      margin: 1rem 1rem 0.5rem;
+      padding: 11px 13px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(37,99,235,0.25);
+      border-radius: var(--radius-md);
+    }
+    .student-card .name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .student-card .level-badge {
+      display: inline-block; margin-top: 5px;
+      font-size: 10px; font-weight: 600; padding: 2px 8px;
+      background: var(--primary); color: #fff;
+      border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+
+    .sidebar-section {
+      padding: 1rem 1.25rem 0.4rem;
+      font-size: 10px; font-weight: 700; color: var(--text-dim);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+
+    .topic-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 1.25rem; cursor: pointer;
+      font-size: 13px; color: var(--text-muted);
+      border-left: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .topic-item:hover:not(.locked) { background: var(--surface); color: var(--text); }
+    .topic-item.active {
+      background: var(--primary-glow);
+      color: #93c5fd;
+      border-left-color: var(--primary);
+      font-weight: 600;
+    }
+    .topic-item.locked { opacity: 0.35; cursor: not-allowed; }
+    .topic-item .t-icon { font-size: 14px; flex-shrink: 0; width: 20px; text-align: center; }
+    .topic-item .t-label { flex: 1; line-height: 1.3; }
+    .topic-item .lock { font-size: 10px; }
+
+    .done-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+
+    .sidebar-bottom { margin-top: auto; padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+    .progress-mini { font-size: 11px; color: var(--text-muted); margin-bottom: 7px; display: flex; justify-content: space-between; }
+    .bar { height: 4px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 99px; transition: width .5s ease; }
+
+    /* ---- Main ---- */
+    .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }
+
+    .topbar {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 11px 1.5rem; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .topic-title-area { flex: 1; }
+    .topic-title-area h2 { font-size: 15px; font-weight: 700; }
+    .topic-title-area p { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .btn {
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 12.5px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border-strong); background: var(--surface);
+      color: var(--text-muted); transition: all 0.12s; font-family: var(--font);
+      letter-spacing: 0.01em;
+    }
+    .btn:hover { background: var(--surface2); color: var(--text); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dim); color: #fff; }
+    .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-accent:hover { background: #0d9668; }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--bg2); padding: 0 1.5rem; flex-shrink: 0; gap: 4px;
+    }
+    .tab {
+      padding: 10px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; color: var(--text-dim);
+      transition: all 0.12s; letter-spacing: 0.01em;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab:hover:not(.active) { color: var(--text-muted); }
+
+    /* ---- Panels ---- */
+    .content { flex: 1; overflow-y: auto; }
+    .panel { display: none; height: 100%; }
+    .panel.active { display: flex; flex-direction: column; }
+
+    /* ---- Chat ---- */
+    .chat-area {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+    .msg { display: flex; gap: 10px; max-width: 780px; animation: msgIn 0.2s ease; }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+
+    .msg-avatar {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+    }
+    .msg.ai .msg-avatar { background: linear-gradient(135deg, var(--primary), #7c3aed); color: #fff; }
+    .msg.user .msg-avatar { background: var(--surface2); color: var(--text-muted); }
+
+    .msg-bubble {
+      padding: 10px 14px; border-radius: var(--radius-md);
+      font-size: 13.5px; line-height: 1.7; max-width: 82%;
+      border: 1px solid var(--border);
+    }
+    .msg.ai .msg-bubble {
+      background: var(--surface); border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
+    }
+    .msg.user .msg-bubble {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+      border-radius: var(--radius-md) 4px var(--radius-md) var(--radius-md);
+    }
+
+    .typing-indicator .msg-bubble { padding: 14px 18px; }
+    .dots { display: flex; gap: 4px; align-items: center; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); animation: bounce .9s infinite; }
+    .dot:nth-child(2) { animation-delay: .15s; }
+    .dot:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+    .chat-input-area {
+      padding: 0.9rem 1.5rem 1.1rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg2); flex-shrink: 0;
+    }
+    .quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+    .chip {
+      font-size: 11.5px; padding: 4px 11px; border-radius: 999px;
+      border: 1px solid var(--border-strong); background: transparent;
+      cursor: pointer; color: var(--text-dim); transition: all 0.12s; font-family: var(--font);
+    }
+    .chip:hover { border-color: var(--primary); color: #93c5fd; background: var(--primary-glow); }
+
+    .input-row { display: flex; gap: 8px; }
+    .input-row input {
+      flex: 1; padding: 10px 14px; border-radius: var(--radius-md);
+      border: 1px solid var(--border-strong); font-size: 13.5px;
+      font-family: var(--font); background: var(--surface); color: var(--text);
+      outline: none; transition: border-color 0.12s;
+    }
+    .input-row input:focus { border-color: var(--primary); }
+    .input-row input::placeholder { color: var(--text-dim); }
+
+    /* ---- Learn Panel ---- */
+    .learn-area { padding: 1.5rem; max-width: 720px; }
+    .objectives-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem;
+    }
+    .objectives-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .obj-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+    }
+    .obj-item:last-child { border-bottom: none; }
+    .obj-check {
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid var(--border-strong); flex-shrink: 0; margin-top: 2px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; transition: all 0.12s;
+    }
+    .obj-check.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .obj-text.done { text-decoration: line-through; color: var(--text-dim); }
+
+    .ai-explain-btn {
+      width: 100%; padding: 13px; background: transparent;
+      border: 1.5px dashed rgba(37,99,235,0.4); border-radius: var(--radius-md);
+      color: #93c5fd; font-weight: 600; cursor: pointer; font-size: 13px;
+      font-family: var(--font); transition: all 0.12s;
+    }
+    .ai-explain-btn:hover { background: var(--primary-glow); border-color: var(--primary); }
+
+    /* ---- Quiz Panel ---- */
+    .quiz-area { padding: 1.5rem; max-width: 620px; }
+    .quiz-start { text-align: center; padding: 3rem 1.5rem; }
+    .quiz-start .quiz-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .quiz-start h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .quiz-start p { color: var(--text-muted); margin-bottom: 1.75rem; font-size: 13.5px; line-height: 1.6; }
+    .quiz-q-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem;
+    }
+    .q-num { font-size: 11px; color: var(--text-dim); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .q-text { font-size: 14.5px; font-weight: 600; margin-bottom: 1rem; line-height: 1.55; }
+    .q-options { display: flex; flex-direction: column; gap: 8px; }
+    .q-option {
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border-strong);
+      cursor: pointer; font-size: 13.5px; transition: all 0.12s;
+      background: var(--surface2); font-family: var(--font); color: var(--text); text-align: left;
+    }
+    .q-option:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-glow); color: #93c5fd; }
+    .q-option.selected { border-color: var(--primary); background: var(--primary-glow); }
+    .q-option.correct { border-color: var(--accent); background: var(--accent-glow); color: #6ee7b7; }
+    .q-option.wrong { border-color: var(--danger); background: rgba(239,68,68,0.1); color: #fca5a5; }
+    .explanation-box {
+      background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: 13px; margin-top: 10px; color: #fcd34d; line-height: 1.6;
+    }
+    .quiz-nav { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1rem; }
+    .quiz-result {
+      text-align: center; padding: 2rem;
+      background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border);
+    }
+    .score-circle {
+      width: 88px; height: 88px; border-radius: 50%;
+      margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800; font-family: var(--font-mono);
+    }
+    .score-pass { background: var(--accent-glow); color: #6ee7b7; border: 2px solid var(--accent); }
+    .score-fail { background: rgba(239,68,68,0.1); color: #fca5a5; border: 2px solid var(--danger); }
+
+    /* ---- Notes ---- */
+    .notes-area { padding: 1.5rem; max-width: 720px; }
+    .notes-area textarea {
+      width: 100%; min-height: 340px; padding: 14px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+      font-family: var(--font-mono); font-size: 13px; color: var(--text);
+      background: var(--surface); resize: vertical; outline: none; line-height: 1.75;
+    }
+    .notes-area textarea:focus { border-color: var(--primary); }
+    .notes-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .notes-toolbar span { font-size: 12.5px; color: var(--text-muted); }
+
+    /* ---- Onboarding Modal ---- */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg); padding: 2.25rem; max-width: 420px; width: 90%;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .modal-logo {
+      width: 52px; height: 52px; background: linear-gradient(135deg, var(--primary), #7c3aed);
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 1.25rem;
+    }
+    .modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm); font-size: 13.5px; font-family: var(--font);
+      color: var(--text); background: var(--surface); outline: none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+    .form-group select option { background: var(--surface); }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 700px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; left: -100%; top: 0; bottom: 0; z-index: 50; transition: left .25s ease; width: var(--sidebar-w); }
+      .sidebar.open { left: 0; }
+      .main { height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay" id="onboarding-modal">
+  <div class="modal">
+    <div class="modal-logo" id="modal-logo">📚</div>
+    <h2 id="modal-title">Welcome to Accounting 201</h2>
+    <p id="modal-sub">Tell us a bit about yourself so the AI can tailor your learning experience.</p>
+    <div class="form-group">
+      <label>Your full name</label>
+      <input id="input-name" type="text" placeholder="e.g. Jordan Smith" />
+    </div>
+    <div class="form-group">
+      <label>Current knowledge level</label>
+      <select id="input-level">
+        <option value="beginner">Beginner — new to accounting</option>
+        <option value="intermediate" selected>Intermediate — know the basics</option>
+        <option value="advanced">Advanced — strong accounting background</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Primary learning goal</label>
+      <select id="input-goal">
+        <option value="exam">Prepare for exams</option>
+        <option value="career">Build career skills</option>
+        <option value="understand">Understand concepts deeply</option>
+        <option value="cpa">CPA exam preparation</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" style="width:100%; padding:11px; font-size:14px;" onclick="startSession()">Start Learning →</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="main-app" style="display:none;">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" id="logo">📚</div>
+      <div class="sidebar-title" id="sidebar-title">Accounting 201</div>
+      <div class="sidebar-sub" id="sidebar-sub">AI-Powered Tutor</div>
+    </div>
+
+    <div class="student-card">
+      <div class="name" id="student-name-display">—</div>
+      <span class="level-badge" id="student-level-display">Intermediate</span>
+    </div>
+
+    <div class="sidebar-section">Topics</div>
+    <nav id="topic-nav"></nav>
+
+    <div class="sidebar-bottom">
+      <div class="progress-mini">
+        <span id="progress-label">Progress</span>
+        <span id="progress-pct" style="color:var(--text);">0%</span>
+      </div>
+      <div class="bar"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topic-title-area">
+        <h2 id="active-topic-title">—</h2>
+        <p id="active-topic-desc">—</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" onclick="switchTab('notes')">📝 Notes</button>
+        <button class="btn btn-accent" onclick="switchTab('quiz')">⚡ Quiz Me</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('chat')" id="tab-chat">💬 Chat</div>
+      <div class="tab" onclick="switchTab('learn')" id="tab-learn">🎯 Objectives</div>
+      <div class="tab" onclick="switchTab('quiz')" id="tab-quiz">📝 Quiz</div>
+      <div class="tab" onclick="switchTab('notes')" id="tab-notes">🗒️ Notes</div>
+    </div>
+
+    <div class="content">
+      <!-- CHAT -->
+      <div class="panel active" id="panel-chat">
+        <div class="chat-area" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <div class="quick-chips" id="quick-chips">
+            <button class="chip" onclick="sendChip('Give me a simple numerical example')">📊 Example with numbers</button>
+            <button class="chip" onclick="sendChip('Explain this like I am a complete beginner')">🔤 Simplify</button>
+            <button class="chip" onclick="sendChip('Quiz me on this topic right now')">⚡ Quick quiz</button>
+            <button class="chip" onclick="sendChip('What are the most common mistakes on this topic?')">⚠️ Common mistakes</button>
+            <button class="chip" onclick="sendChip('How does this apply in real business?')">🏢 Real world</button>
+          </div>
+          <div class="input-row">
+            <input id="chat-input" type="text" placeholder="Ask anything…" onkeydown="if(event.key==='Enter') sendMessage()" />
+            <button class="btn btn-primary" onclick="sendMessage()">Send →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEARN -->
+      <div class="panel" id="panel-learn">
+        <div class="learn-area">
+          <div class="objectives-card">
+            <h3>🎯 Learning Objectives</h3>
+            <div id="objectives-list"></div>
+          </div>
+          <button class="ai-explain-btn" onclick="askTutorToExplain()">
+            ✨ Have AI walk through all objectives with examples →
+          </button>
+        </div>
+      </div>
+
+      <!-- QUIZ -->
+      <div class="panel" id="panel-quiz">
+        <div class="quiz-area">
+          <div id="quiz-container"></div>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="panel" id="panel-notes">
+        <div class="notes-area">
+          <div class="notes-toolbar">
+            <span>📝 Notes — <strong id="notes-topic-label">this topic</strong></span>
+            <button class="btn" onclick="saveNotes()">Save</button>
+          </div>
+          <textarea id="notes-editor" placeholder="Write your notes here…"></textarea>
+          <p style="font-size: 11.5px; color: var(--text-dim); margin-top: 8px;">Auto-saved to your browser when you switch topics.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let studentName = "", studentLevel = "intermediate", studentGoal = "understand";
+let activeTopic = null;
+let chatHistory = {}, completedTopics = new Set(), objectivesDone = {}, notes = {};
+let quizState = null;
+
+window.addEventListener('load', () => { applyConfig(); loadLocalStorage(); });
+
+function applyConfig() {
+  const C = APP_CONFIG;
+  document.title = `${C.app.name} — Student`;
+  document.getElementById('sidebar-title').textContent = C.app.courseCode;
+  document.getElementById('sidebar-sub').textContent   = C.app.name;
+  document.getElementById('modal-title').textContent   = `Welcome to ${C.app.courseCode}`;
+  document.getElementById('modal-sub').textContent     = `${C.app.name} · ${C.app.institution}`;
+}
+
+function loadLocalStorage() {
+  const saved = localStorage.getItem('acct201_student');
+  if (saved) {
+    const d = JSON.parse(saved);
+    studentName = d.name || ""; studentLevel = d.level || "intermediate"; studentGoal = d.goal || "understand";
+    chatHistory = d.chat || {}; notes = d.notes || {}; objectivesDone = d.objDone || {};
+    completedTopics = new Set(d.completed || []);
+    if (studentName) {
+      document.getElementById('onboarding-modal').style.display = 'none';
+      document.getElementById('main-app').style.display = 'grid';
+      initApp();
+    }
+  }
+}
+
+function saveLocalStorage() {
+  localStorage.setItem('acct201_student', JSON.stringify({
+    name: studentName, level: studentLevel, goal: studentGoal,
+    chat: chatHistory, notes, objDone: objectivesDone, completed: [...completedTopics],
+  }));
+}
+
+function startSession() {
+  studentName  = document.getElementById('input-name').value.trim() || "Student";
+  studentLevel = document.getElementById('input-level').value;
+  studentGoal  = document.getElementById('input-goal').value;
+  document.getElementById('onboarding-modal').style.display = 'none';
+  document.getElementById('main-app').style.display = 'grid';
+  saveLocalStorage(); initApp();
+}
+
+function initApp() {
+  document.getElementById('student-name-display').textContent  = studentName;
+  document.getElementById('student-level-display').textContent = capitalize(studentLevel);
+  buildTopicNav();
+  const first = APP_CONFIG.curriculum.find(t => t.unlocked);
+  selectTopic(first.id);
+  updateProgress();
+}
+
+function buildTopicNav() {
+  const nav = document.getElementById('topic-nav');
+  nav.innerHTML = '';
+  APP_CONFIG.curriculum.forEach(t => {
+    const div = document.createElement('div');
+    const isDone = completedTopics.has(t.id);
+    div.className = 'topic-item' + (t.unlocked ? '' : ' locked');
+    div.id = 'nav-' + t.id;
+    div.innerHTML = `<span class="t-icon">${t.icon}</span>
+      <span class="t-label">${t.title}</span>
+      ${isDone ? '<span class="done-dot"></span>' : ''}
+      ${!t.unlocked ? '<span class="lock">🔒</span>' : ''}`;
+    if (t.unlocked) div.onclick = () => selectTopic(t.id);
+    nav.appendChild(div);
+  });
+}
+
+function selectTopic(id) {
+  if (activeTopic) saveCurrentNotes();
+  activeTopic = id;
+  const topic = APP_CONFIG.curriculum.find(t => t.id === id);
+  document.querySelectorAll('.topic-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + id);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('active-topic-title').textContent = topic.title;
+  document.getElementById('active-topic-desc').textContent  = topic.description;
+  document.getElementById('notes-topic-label').textContent  = topic.title;
+  renderObjectives(topic); renderChat(); renderNotes(); renderQuizStart(); switchTab('chat');
+  if (!chatHistory[id] || chatHistory[id].length === 0) sendWelcomeMessage(topic);
+}
+
+async function sendWelcomeMessage(topic) {
+  await callAI(`Greet the student warmly and introduce "${topic.title}". Mention 1-2 key things they'll learn and ask one engaging opening question. Keep it to 3-4 sentences.`, false);
+}
+
+function renderChat() {
+  const c = document.getElementById('chat-messages');
+  c.innerHTML = '';
+  (chatHistory[activeTopic] || []).forEach(m => appendMessage(m.role, m.content, false));
+}
+
+function appendMessage(role, text, save = true) {
+  const c = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const initials = role === 'user' ? getInitials(studentName) : 'AI';
+  div.innerHTML = `<div class="msg-avatar">${initials}</div><div class="msg-bubble">${escHtml(text)}</div>`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+  if (save) {
+    if (!chatHistory[activeTopic]) chatHistory[activeTopic] = [];
+    chatHistory[activeTopic].push({ role, content: text });
+    saveLocalStorage();
+  }
+}
+
+function showTyping() {
+  const c = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai typing-indicator'; div.id = 'typing';
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  c.appendChild(div); c.scrollTop = c.scrollHeight;
+}
+function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim(); if (!text) return;
+  input.value = ''; appendMessage('user', text); callAI(text, true);
+}
+function sendChip(text) { appendMessage('user', text); callAI(text, true); }
+
+async function callAI(userMessage, addToHistory) {
+  const C = APP_CONFIG;
+  if (!C.ai.apiKey || C.ai.apiKey === 'YOUR_API_KEY_HERE') {
+    appendMessage('ai', '⚠️ No API key set. Please add your Anthropic API key in shared/config.js.');
+    return;
+  }
+  if (addToHistory) {
+    if (!chatHistory[activeTopic]) chatHistory[activeTopic] = [];
+    chatHistory[activeTopic].push({ role: 'user', content: userMessage });
+    saveLocalStorage();
+  }
+  showTyping(); switchTab('chat');
+  const topic = APP_CONFIG.curriculum.find(t => t.id === activeTopic);
+  const system = C.ai.systemPromptTemplate
+    .replace('{courseCode}', C.app.courseCode).replace('{courseName}', C.app.name)
+    .replace('{institution}', C.app.institution).replace('{studentName}', studentName)
+    .replace('{studentLevel}', capitalize(studentLevel)).replace('{currentTopic}', topic ? topic.title : activeTopic);
+  const messages = (chatHistory[activeTopic] || []).map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content }));
+  if (!messages.length || messages[messages.length-1].role !== 'user') messages.push({ role: 'user', content: userMessage });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': C.ai.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: C.ai.model, max_tokens: C.ai.maxTokens, system, messages }),
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "I'm having trouble responding right now. Please try again.";
+    removeTyping(); appendMessage('ai', reply);
+  } catch (e) {
+    removeTyping(); appendMessage('ai', 'Connection error. Please check your internet and try again.');
+  }
+}
+
+function renderObjectives(topic) {
+  const list = document.getElementById('objectives-list');
+  list.innerHTML = '';
+  if (!objectivesDone[topic.id]) objectivesDone[topic.id] = [];
+  const done = new Set(objectivesDone[topic.id]);
+  (topic.learningObjectives || []).forEach((obj, i) => {
+    const div = document.createElement('div');
+    div.className = 'obj-item';
+    const isDone = done.has(i);
+    div.innerHTML = `<div class="obj-check ${isDone ? 'done' : ''}" onclick="toggleObjective('${topic.id}', ${i}, this)">${isDone ? '✓' : ''}</div>
+      <div class="obj-text ${isDone ? 'done' : ''}">${obj}</div>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleObjective(topicId, idx, el) {
+  if (!objectivesDone[topicId]) objectivesDone[topicId] = [];
+  const arr = objectivesDone[topicId];
+  const pos = arr.indexOf(idx);
+  const topic = APP_CONFIG.curriculum.find(t => t.id === topicId);
+  if (pos === -1) { arr.push(idx); el.classList.add('done'); el.textContent = '✓'; el.nextElementSibling.classList.add('done'); }
+  else { arr.splice(pos, 1); el.classList.remove('done'); el.textContent = ''; el.nextElementSibling.classList.remove('done'); }
+  if (arr.length === (topic?.learningObjectives?.length || 0)) completedTopics.add(topicId);
+  else completedTopics.delete(topicId);
+  buildTopicNav(); updateProgress(); saveLocalStorage();
+}
+
+function askTutorToExplain() {
+  const topic = APP_CONFIG.curriculum.find(t => t.id === activeTopic);
+  sendChip(`Walk me through all the learning objectives for "${topic.title}" one by one, with a brief explanation and example for each.`);
+}
+
+function renderQuizStart() {
+  const topic = APP_CONFIG.curriculum.find(t => t.id === activeTopic);
+  const C = APP_CONFIG.quiz;
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="quiz-start">
+      <div class="quiz-icon">${topic.icon}</div>
+      <h3>Quiz: ${topic.title}</h3>
+      <p>${C.questionsPerSession} questions · ${C.passingScore}% to pass<br>Fresh AI-generated questions every time.</p>
+      <button class="btn btn-primary" style="padding:11px 28px;" onclick="startQuiz()">Start Quiz →</button>
+    </div>`;
+}
+
+async function startQuiz() {
+  const topic = APP_CONFIG.curriculum.find(t => t.id === activeTopic);
+  const C = APP_CONFIG;
+  if (!C.ai.apiKey || C.ai.apiKey === 'YOUR_API_KEY_HERE') {
+    document.getElementById('quiz-container').innerHTML = '<p style="padding:2rem;color:var(--danger);">⚠️ Add your API key in config.js to generate quizzes.</p>';
+    return;
+  }
+  document.getElementById('quiz-container').innerHTML = '<p style="padding:2rem;color:var(--text-muted);text-align:center;">⏳ Generating quiz…</p>';
+  const prompt = `Generate exactly ${C.quiz.questionsPerSession} multiple-choice questions for Accounting 201 on: "${topic.title}". Student level: ${studentLevel}. Return ONLY a JSON array, no markdown, no preamble:\n[{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explanation":"..."}]\ncorrect is the 0-based index. Keep questions practical with numbers.`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': C.ai.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: C.ai.model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await res.json();
+    let text = (data.content?.[0]?.text || '[]').replace(/```json|```/g, '').trim();
+    quizState = { questions: JSON.parse(text), current: 0, answers: [], score: 0 };
+    renderQuestion();
+  } catch (e) {
+    document.getElementById('quiz-container').innerHTML = '<p style="padding:2rem;color:var(--danger);">Failed to generate quiz. Check your API key and connection.</p>';
+  }
+}
+
+function renderQuestion() {
+  const { questions, current } = quizState;
+  if (current >= questions.length) { renderQuizResult(); return; }
+  const q = questions[current];
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="quiz-q-card">
+      <div class="q-num">Question ${current + 1} of ${questions.length}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="q-options">${q.options.map((opt, i) => `<button class="q-option" onclick="selectAnswer(${i})">${opt}</button>`).join('')}</div>
+      <div id="q-explanation" style="display:none" class="explanation-box"></div>
+    </div>
+    <div class="quiz-nav">
+      <button class="btn btn-primary" id="next-btn" style="display:none;" onclick="nextQuestion()">${current + 1 < questions.length ? 'Next →' : 'See Results →'}</button>
+    </div>`;
+}
+
+function selectAnswer(idx) {
+  const q = quizState.questions[quizState.current];
+  document.querySelectorAll('.q-option').forEach(b => { b.disabled = true; });
+  document.querySelectorAll('.q-option')[idx].classList.add(idx === q.correct ? 'correct' : 'wrong');
+  if (idx !== q.correct) document.querySelectorAll('.q-option')[q.correct].classList.add('correct');
+  if (idx === q.correct) quizState.score++;
+  quizState.answers.push(idx);
+  if (APP_CONFIG.quiz.showExplanationsAfter) {
+    const expEl = document.getElementById('q-explanation');
+    expEl.style.display = 'block'; expEl.textContent = '💡 ' + q.explanation;
+  }
+  document.getElementById('next-btn').style.display = 'inline-block';
+}
+
+function nextQuestion() { quizState.current++; renderQuestion(); }
+
+function renderQuizResult() {
+  const { questions, score } = quizState;
+  const pct = Math.round((score / questions.length) * 100);
+  const pass = pct >= APP_CONFIG.quiz.passingScore;
+  const topicTitle = APP_CONFIG.curriculum.find(t => t.id === activeTopic)?.title;
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="quiz-result">
+      <div class="score-circle ${pass ? 'score-pass' : 'score-fail'}">${pct}%</div>
+      <h3 style="font-size:18px; font-weight:700; margin-bottom:6px;">${pass ? '🎉 Passed!' : '📚 Keep Studying'}</h3>
+      <p style="color:var(--text-muted); margin-bottom:1.5rem;">${score} / ${questions.length} correct · ${pass ? 'Great work!' : `Need ${APP_CONFIG.quiz.passingScore}% to pass.`}</p>
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="startQuiz()">Retake Quiz</button>
+        <button class="btn" onclick="sendChip('I just finished the quiz on ${topicTitle}. Can you review the concepts I should focus on?')">Review with AI</button>
+      </div>
+    </div>`;
+}
+
+function renderNotes() { document.getElementById('notes-editor').value = notes[activeTopic] || ''; }
+function saveCurrentNotes() {
+  const editor = document.getElementById('notes-editor');
+  if (editor && activeTopic) { notes[activeTopic] = editor.value; saveLocalStorage(); }
+}
+function saveNotes() { saveCurrentNotes(); showToast('Notes saved!'); }
+
+function switchTab(tab) {
+  ['chat','learn','quiz','notes'].forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`tab-${t}`)?.classList.toggle('active', t === tab);
+  });
+}
+
+function updateProgress() {
+  const total = APP_CONFIG.curriculum.length;
+  const done  = completedTopics.size;
+  const pct   = Math.round((done / total) * 100);
+  document.getElementById('progress-label').textContent = `${done} / ${total} topics`;
+  document.getElementById('progress-pct').textContent   = pct + '%';
+  document.getElementById('progress-bar').style.width   = pct + '%';
+}
+
+function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
+function getInitials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || 'ST'; }
+function escHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);color:var(--text);border:1px solid var(--border-strong);padding:10px 18px;border-radius:10px;font-size:13px;z-index:999;animation:msgIn 0.2s ease;';
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2400);
+}
+</script>
+</body>
+</html>
