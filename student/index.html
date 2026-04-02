@@ -482,8 +482,7 @@
 
 <script>
 // API key injected at runtime
-const _k = ['sk-ant-api03-RWucfjqIBiH3I6pBO35CxEn-JDNJVp6qALMZv',
-            'v6VeUmrm2qFaC3YdEnAfkn8A5QYBIP5EKaY5IdC6jyBzktIpw-PKJLdQAA'].join('');
+const _k = ['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',;
 let studentName = "", studentLevel = "intermediate", studentGoal = "understand";
 let activeTopic = null;
 let chatHistory = {}, completedTopics = new Set(), objectivesDone = {}, notes = {};
@@ -615,7 +614,7 @@ function sendChip(text) { appendMessage('user', text); callAI(text, true); }
 async function callAI(userMessage, addToHistory) {
   const runtimeKey = localStorage.getItem('acct201_apikey');
   const C = APP_CONFIG;
-  if (!C.ai.apiKey || C.ai.apiKey === 'YOUR_API_KEY_HERE') {
+  if (!C.ai.apiKey || C.ai.apiKey === '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') {
     appendMessage('ai', '⚠️ No API key set. Please add your Anthropic API key in shared/config.js.');
     return;
   }
